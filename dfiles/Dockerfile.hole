@@ -1,0 +1,15 @@
+FROM golang:1.25.4-alpine3.22
+WORKDIR /app
+
+COPY go.mod ./
+RUN go mod download
+
+COPY . .
+
+# Build the server
+RUN go build -o hole-serve ./hole
+
+EXPOSE 8080
+
+CMD ["./hole-serve"]
+

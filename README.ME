@@ -1,0 +1,28 @@
+# WHACK-A-MOLE
+
+This is a goofy project designed to practice creating docker containers, communicating between them, and communicating with them from the command line.  The idea is that the user will spawn n servers (or holes for the moles).  They will then spawn k (some number equal to or less than n) moles.  The moles will simply be a state of the server which is occupied or not.  Each mole will be in a state of exposed or not.  A Watcher will receive all of the state information when a mole moves from one hole to another or if they become exposed or not.  The user will send curl commands to each of the servers to "Whack" the moles.  If a mole is whacked then it will be removed from the game.  The server will return to the watcher the result of the attempt.  Stats will be returned such as the hit percentage and time taken.
+
+
+BIG WIN
+===================================
+Just create and Dockerize the Hole and you are looking good!
+===================================
+
+Follow up
+TODO: Create mole
+TODO: Dockerize mole
+TODO: Pass to user/storage process
+TODO: Make logic to create multi and finish state
+
+
+1. Make the hole spawn
+1.1 Make hole package (Holes are a process on their own)
+1.1 Make hole state
+1.1 Make hole handlers
+1. Make the moles occupy a hole (Moles are processes.  They search, occupy, and die)
+1. Allow the user to whack the mole (The user will whack at a hole, if mole occupies and is exposed then hole sends message to kill mole)
+1. Make a mole change states
+1. Make the states talk to the watcher and print
+1. Make many holes with many moles
+1. Make a mole move from one hole to another (check state, reserve, and return)
+1. Save watcher outputs to file as well as printing

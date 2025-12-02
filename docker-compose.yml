@@ -1,0 +1,41 @@
+services:
+  wa:
+    build:
+      context: .
+      dockerfile: dfiles/Dockerfile.watcher
+    ports:
+      - "42069:8080"
+    container_name: watch
+    environment:
+      # If app2 needs to call app1, set the URL here
+      - APP2_URL=http://ho:8080
+      - APP3_URL=http://mo:8080
+  
+  ho:
+    build:
+      context: .
+      dockerfile: dfiles/Dockerfile.hole
+    ports:
+      - "42070:8080" # - "42070-42074:8080"
+    #deploy:
+    #  replicas: 5
+    depends_on:
+      - wa
+    environment:
+      # If app2 needs to call app1, set the URL here
+      - APP1_URL=http://watch:8080
+  
+  mo:
+    build:
+      context: .
+      dockerfile: dfiles/Dockerfile.mole
+    ports:
+      - "42071:8080" # - "42070-42074:8080"
+    #deploy:
+    #  replicas: 5
+    depends_on:
+      - wa
+      - ho
+    environment:
+      # If app2 needs to call app1, set the URL here
+      - APP1_URL=http://watch:8080
