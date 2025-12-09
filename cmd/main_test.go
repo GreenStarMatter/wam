@@ -2,13 +2,16 @@ package main
 
 import (
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"testing"
 )
 
 func TestHole(t *testing.T) {
-	f := &HoleFactory{}
-	h := f.NewHole()
-	assert.Equal(t, h, &Hole{ID: 1, State: Unoccupied})
+	f := NewHoleFactory()
+	h, _ := f.NewHole()
+	assert.Equal(t, h, &Hole{ID: 1, State: Unoccupied, ParentHoleSet: f.HoleSet})
+	err := f.HoleSet.AddAvailable(h)
+	require.Error(t, err)
 }
 
 func TestMole(t *testing.T) {
@@ -31,10 +34,10 @@ func TestMole(t *testing.T) {
 }
 
 func TestMoleOccupy(t *testing.T) {
-	hf := &HoleFactory{}
+	hf := NewHoleFactory()
 	mf := &MoleFactory{}
-	h := hf.NewHole()
-	assert.Equal(t, h, &Hole{ID: 1, State: Unoccupied})
+	h, _ := hf.NewHole()
+	assert.Equal(t, h, &Hole{ID: 1, State: Unoccupied, ParentHoleSet: hf.HoleSet})
 	m := mf.NewMole()
 	assert.Equal(t, m, &Mole{ID: 1, State: HidingAlive})
 	occupied := m.Occupy(h)
