@@ -40,7 +40,7 @@ func TestMoleOccupy(t *testing.T) {
 	assert.Equal(t, h, &Hole{ID: 1, State: Unoccupied, ParentHoleSet: hf.HoleSet})
 	m := mf.NewMole()
 	assert.Equal(t, m, &Mole{ID: 1, State: HidingAlive})
-	occupied := m.Occupy(h)
+	occupied := m.TryOccupy(&hf.HoleSet)
 	assert.Equal(t, occupied, true)
 	assert.Equal(t, h.OccupyingMole, m)
 	assert.Equal(t, h.State, Occupied)

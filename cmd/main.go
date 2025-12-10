@@ -39,27 +39,27 @@ type HoleSet struct {
 }
 
 func (hs *HoleSet) addToMap(m map[int]*Hole, h *Hole) error {
-    if _, ok := m[h.ID]; ok {
-        return fmt.Errorf("hole %d already exists", h.ID)
-    }
-    m[h.ID] = h
-    return nil
+	if _, ok := m[h.ID]; ok {
+		return fmt.Errorf("hole %d already exists", h.ID)
+	}
+	m[h.ID] = h
+	return nil
 }
 
 func (hs *HoleSet) AddAvailable(h *Hole) error {
-    return hs.addToMap(hs.Available, h)
+	return hs.addToMap(hs.Available, h)
 }
 
 func (hs *HoleSet) RemoveAvailable(h *Hole) {
-    delete(hs.Available, h.ID)
+	delete(hs.Available, h.ID)
 }
 
 func (hs *HoleSet) AddUnavailable(h *Hole) error {
-    return hs.addToMap(hs.Unavailable, h)
+	return hs.addToMap(hs.Unavailable, h)
 }
 
 func (hs *HoleSet) RemoveUnavailable(h *Hole) {
-    delete(hs.Unavailable, h.ID)
+	delete(hs.Unavailable, h.ID)
 }
 
 func (f *HoleFactory) NewHole() (*Hole, error) {
@@ -134,6 +134,28 @@ func (m *Mole) TryWhack() bool {
 	}
 	m.State = Dead
 	return true
+}
+
+
+func (m *Mole) GetAvailableHole(hs *HoleSet) *Hole {
+	if m.State == Dead {
+		return nil
+	}
+	if len(hs.Available) < 1 {
+		return nil
+	}
+	for _, h := range hs.Available {
+		return h
+	}
+	return nil
+}
+
+func (m *Mole) TryOccupy(hs *HoleSet) bool {
+	h := m.GetAvailableHole(hs)
+	if h == nil {
+		return false
+	}
+	return m.Occupy(h)
 }
 
 func main() {
