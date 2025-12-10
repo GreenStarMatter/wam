@@ -21,7 +21,8 @@ const (
 )
 
 const (
-	HidingAlive MoleState = iota
+	TunnelingAlive MoleState = iota
+	HidingAlive
 	ExposedAlive
 	Dead
 )
@@ -84,11 +85,12 @@ func NewHoleFactory() *HoleFactory {
 type Mole struct {
 	ID    int
 	State MoleState
+	HoleOccupied *Hole
 }
 
 func (f *MoleFactory) NewMole() *Mole {
 	f.MoleId++
-	return &Mole{ID: f.MoleId, State: HidingAlive}
+	return &Mole{ID: f.MoleId, State: TunnelingAlive}
 }
 
 func (h *Hole) TryOccupy(m *Mole) bool {
@@ -99,12 +101,31 @@ func (h *Hole) TryOccupy(m *Mole) bool {
 	h.ParentHoleSet.RemoveAvailable(h)
 	h.ParentHoleSet.AddUnavailable(h)
 	h.OccupyingMole = m
+	m.HoleOccupied = h
+	m.State = HidingAlive
 	h.State = Occupied
 	return true
 }
 
+func (h *Hole) Free() {
+	h.ParentHoleSet.AddAvailable(h)
+	h.ParentHoleSet.RemoveUnavailable(h)
+	h.OccupyingMole.HoleOccupied = nil
+	h.OccupyingMole.State = TunnelingAlive
+	h.OccupyingMole = nil
+	h.State = Unoccupied
+}
+
 func (m *Mole) Occupy(h *Hole) bool {
 	return h.TryOccupy(m)
+}
+
+func (m *Mole) Tunnel(hs *HoleSet) {
+	if m.HoleOccupied != nil {
+		m.HoleOccupied.Free()
+	}
+	m.State = TunnelingAlive
+	m.TryOccupy(hs)
 }
 
 func (m *Mole) ToggleState() {
