@@ -13,6 +13,7 @@ type HoleFactory struct {
 
 type MoleFactory struct {
 	MoleId int
+	MoleSet MoleSet
 }
 
 const (
@@ -38,6 +39,46 @@ type HoleSet struct {
 	Available   map[int]*Hole
 	Unavailable map[int]*Hole
 }
+
+type MoleSet struct {
+	Housed map[int]*Mole
+	Unhoused map[int]*Mole
+	Dead map[int]*Mole
+}
+
+
+func (ms *MoleSet) addToMap(m map[int]*Mole, mo *Mole) error {
+	if _, ok := m[mo.ID]; ok {
+		return fmt.Errorf("mole %d already exists", mo.ID)
+	}
+	m[mo.ID] = mo
+	return nil
+}
+
+func (ms *MoleSet) AddHoused(m *Mole) error {
+	return ms.addToMap(ms.Housed, m)
+}
+
+func (ms *MoleSet) RemoveHoused(m *Mole) {
+	delete(ms.Housed, m.ID)
+}
+
+func (ms *MoleSet) AddUnhoused(m *Mole) error {
+	return ms.addToMap(ms.Unhoused, m)
+}
+
+func (ms *MoleSet) RemoveUnhoused(m *Mole) {
+	delete(ms.Unhoused, m.ID)
+}
+
+func (ms *MoleSet) AddDead(m *Mole) error {
+	return ms.addToMap(ms.Dead, m)
+}
+
+func (ms *MoleSet) RemoveDead(m *Mole) {
+	delete(ms.Dead, m.ID)
+}
+
 
 func (hs *HoleSet) addToMap(m map[int]*Hole, h *Hole) error {
 	if _, ok := m[h.ID]; ok {
@@ -82,15 +123,31 @@ func NewHoleFactory() *HoleFactory {
 	}
 }
 
+func NewMoleFactory() *MoleFactory {
+	return &MoleFactory{
+		MoleSet: MoleSet{
+			Housed:   make(map[int]*Mole),
+			Unhoused: make(map[int]*Mole),
+			Dead: make(map[int]*Mole),
+		},
+	}
+}
+
 type Mole struct {
 	ID    int
 	State MoleState
 	HoleOccupied *Hole
+	ParentMoleSet MoleSet
 }
 
-func (f *MoleFactory) NewMole() *Mole {
+func (f *MoleFactory) NewMole() (*Mole, error) {
 	f.MoleId++
-	return &Mole{ID: f.MoleId, State: TunnelingAlive}
+	m := &Mole{ID: f.MoleId, State: TunnelingAlive, ParentMoleSet: f.MoleSet}
+	err := f.MoleSet.AddUnhoused(m)
+	if err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 func (h *Hole) TryOccupy(m *Mole) bool {
@@ -100,6 +157,8 @@ func (h *Hole) TryOccupy(m *Mole) bool {
 
 	h.ParentHoleSet.RemoveAvailable(h)
 	h.ParentHoleSet.AddUnavailable(h)
+	m.ParentMoleSet.RemoveUnhoused(m)
+	m.ParentMoleSet.AddHoused(m)
 	h.OccupyingMole = m
 	m.HoleOccupied = h
 	m.State = HidingAlive
@@ -110,6 +169,9 @@ func (h *Hole) TryOccupy(m *Mole) bool {
 func (h *Hole) Free() {
 	h.ParentHoleSet.AddAvailable(h)
 	h.ParentHoleSet.RemoveUnavailable(h)
+	m := h.OccupyingMole
+	m.ParentMoleSet.AddUnhoused(m)
+	m.ParentMoleSet.RemoveHoused(m)
 	h.OccupyingMole.HoleOccupied = nil
 	h.OccupyingMole.State = TunnelingAlive
 	h.OccupyingMole = nil
@@ -153,6 +215,8 @@ func (m *Mole) TryWhack() bool {
 	if m.State != ExposedAlive {
 		return false
 	}
+	m.ParentMoleSet.RemoveHoused(m)
+	m.ParentMoleSet.AddDead(m)
 	m.State = Dead
 	return true
 }
@@ -178,6 +242,69 @@ func (m *Mole) TryOccupy(hs *HoleSet) bool {
 	}
 	return m.Occupy(h)
 }
+
+
+type GameState int
+
+const (
+	Initializing GameState = iota
+	Playing
+	End
+)
+
+type Game struct {
+	HoleFactory *HoleFactory
+	MoleFactory *MoleFactory
+	State GameState
+}
+
+//make holes
+func (g *Game) MakeHoles(holes int) {
+	for _ = range holes {
+		_, _ = g.HoleFactory.NewHole()
+	}
+}
+
+func (g *Game) MakeMoles(moles int) {
+	for _ = range moles {
+		_, _ = g.MoleFactory.NewMole()
+	}
+}
+
+
+func (g *Game) HouseMoles() {
+	for _, m := range g.MoleFactory.MoleSet.Unhoused {
+		_ = m.TryOccupy(&g.HoleFactory.HoleSet)
+	}
+}
+
+func NewGame() *Game {
+	hf := &HoleFactory{}
+	mf := &MoleFactory{}
+	return &Game{HoleFactory: hf, MoleFactory: mf, State: Initializing}
+}
+func (g *Game) Init(holes int, moles int) {
+	g.HoleFactory = NewHoleFactory()
+	g.MakeHoles(holes)
+	g.MoleFactory = NewMoleFactory()
+	g.MakeMoles(moles)
+	g.HouseMoles()
+}
+
+func (g *Game) CheckWin(moles int) bool {
+	if moles == len(g.MoleFactory.MoleSet.Dead) {
+		return true
+	}
+
+	return false
+}
+
+//TODO: Make play logic (User interaction)
+//TODO: Make Moles Randomely Move (Make a rand function which fires and chooses moles to move or toggle exposure)
+//TODO: Make Player Able to Send Kill Command
+
+
+
 
 func main() {
 

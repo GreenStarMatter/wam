@@ -15,60 +15,97 @@ func TestHole(t *testing.T) {
 }
 
 func TestMole(t *testing.T) {
-	f := &MoleFactory{}
-	m := f.NewMole()
-	assert.Equal(t, m, &Mole{ID: 1, State: TunnelingAlive})
+	f := NewMoleFactory()
+	m, _ := f.NewMole()
+	assert.Equal(t, m, &Mole{ID: 1, State: TunnelingAlive, ParentMoleSet: f.MoleSet})
 	//Manually set mole to hiding
 	m.State = HidingAlive
 	m.ToggleState()
-	assert.Equal(t, m, &Mole{ID: 1, State: ExposedAlive})
+	assert.Equal(t, m, &Mole{ID: 1, State: ExposedAlive, ParentMoleSet: f.MoleSet})
 	m.ToggleState()
-	assert.Equal(t, m, &Mole{ID: 1, State: HidingAlive})
+	assert.Equal(t, m, &Mole{ID: 1, State: HidingAlive, ParentMoleSet: f.MoleSet})
 	whacked := m.TryWhack()
 	assert.Equal(t, whacked, false)
 	m.ToggleState()
 	whacked = m.TryWhack()
 	assert.Equal(t, whacked, true)
-	assert.Equal(t, m, &Mole{ID: 1, State: Dead})
+	assert.Equal(t, m, &Mole{ID: 1, State: Dead, ParentMoleSet: f.MoleSet})
 	m.ToggleState()
-	assert.Equal(t, m, &Mole{ID: 1, State: Dead})
+	assert.Equal(t, m, &Mole{ID: 1, State: Dead, ParentMoleSet: f.MoleSet})
 }
 
 func TestMoleOccupy(t *testing.T) {
 	hf := NewHoleFactory()
-	mf := &MoleFactory{}
+	mf := NewMoleFactory()
 	h, _ := hf.NewHole()
 	assert.Equal(t, h, &Hole{ID: 1, State: Unoccupied, ParentHoleSet: hf.HoleSet})
-	m := mf.NewMole()
-	assert.Equal(t, m, &Mole{ID: 1, State: TunnelingAlive})
+	m, _ := mf.NewMole()
+	assert.Equal(t, m, &Mole{ID: 1, State: TunnelingAlive, ParentMoleSet: mf.MoleSet})
 	occupied := m.TryOccupy(&hf.HoleSet)
 	assert.Equal(t, occupied, true)
-	assert.Equal(t, m, &Mole{ID: 1, State: HidingAlive, HoleOccupied: h})
+	assert.Equal(t, m, &Mole{ID: 1, State: HidingAlive, HoleOccupied: h, ParentMoleSet: mf.MoleSet})
 	assert.Equal(t, h.OccupyingMole, m)
 	assert.Equal(t, h.State, Occupied)
 	h.Free()
 	//Broken state, should never have a free called without wrapper
 	assert.Equal(t, h, &Hole{ID: 1, State: Unoccupied, ParentHoleSet: hf.HoleSet})
-	assert.Equal(t, m, &Mole{ID: 1, State: TunnelingAlive})
+	assert.Equal(t, m, &Mole{ID: 1, State: TunnelingAlive, ParentMoleSet: mf.MoleSet})
 }
 
 func TestMoleTunnel(t *testing.T) {
 	hf := NewHoleFactory()
-	mf := &MoleFactory{}
+	mf := NewMoleFactory()
 	h, _ := hf.NewHole()
-	m := mf.NewMole()
-	m2 := mf.NewMole()
+	m, _ := mf.NewMole()
+	m2, _ := mf.NewMole()
 	occupied := m.TryOccupy(&hf.HoleSet)
 	assert.Equal(t, occupied, true)
 	assert.Equal(t, h.OccupyingMole, m)
 	assert.Equal(t, h.State, Occupied)
 	occupied2 := m2.TryOccupy(&hf.HoleSet)
 	assert.Equal(t, occupied2, false)
-	assert.Equal(t, m, &Mole{ID: 1, State: HidingAlive, HoleOccupied: h})
-	assert.Equal(t, m2, &Mole{ID: 2, State: TunnelingAlive, HoleOccupied: nil})
+	assert.Equal(t, m, &Mole{ID: 1, State: HidingAlive, HoleOccupied: h, ParentMoleSet: mf.MoleSet})
+	assert.Equal(t, m2, &Mole{ID: 2, State: TunnelingAlive, HoleOccupied: nil, ParentMoleSet: mf.MoleSet})
 
 	h2, _ := hf.NewHole()
 	m2.Tunnel(&hf.HoleSet)
-	assert.Equal(t, m2, &Mole{ID: 2, State: HidingAlive, HoleOccupied: h2})
+	assert.Equal(t, m2, &Mole{ID: 2, State: HidingAlive, HoleOccupied: h2, ParentMoleSet: mf.MoleSet})
 }
 
+func TestGameSetup(t *testing.T) {
+	g := NewGame()
+	g.Init(5, 3)
+	assert.Equal(t, 2, len(g.HoleFactory.HoleSet.Available))
+	assert.Equal(t, 3, len(g.HoleFactory.HoleSet.Unavailable))
+
+	g = NewGame()
+	g.Init(5, 7)
+	assert.Equal(t, 0, len(g.HoleFactory.HoleSet.Available))
+	assert.Equal(t, 5, len(g.HoleFactory.HoleSet.Unavailable))
+
+
+	g = NewGame()
+	g.Init(0, 7)
+	assert.Equal(t, 0, len(g.HoleFactory.HoleSet.Available))
+	assert.Equal(t, 0, len(g.HoleFactory.HoleSet.Unavailable))
+}
+
+
+func TestGameWin(t *testing.T) {
+	g := NewGame()
+	g.Init(3, 3)
+
+	assert.Equal(t, 0, len(g.MoleFactory.MoleSet.Dead))
+
+	hs := g.MoleFactory.MoleSet.Housed
+	hs[1].ToggleState()
+	hs[2].ToggleState()
+	hs[3].ToggleState()
+
+	_ = hs[1].TryWhack()
+	_ = hs[2].TryWhack()
+	_ = hs[3].TryWhack()
+
+	assert.Equal(t, 3, len(g.MoleFactory.MoleSet.Dead))
+	assert.True(t, g.CheckWin(3))
+}
