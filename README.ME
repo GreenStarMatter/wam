@@ -1,5 +1,8 @@
 # WHACK-A-MOLE
 
+
+## V1 Spike
+======================================================================
 This is a goofy project designed to practice creating docker containers, communicating between them, and communicating with them from the command line.  The idea is that the user will spawn n servers (or holes for the moles).  They will then spawn k (some number equal to or less than n) moles.  The moles will simply be a state of the server which is occupied or not.  Each mole will be in a state of exposed or not.  A Watcher will receive all of the state information when a mole moves from one hole to another or if they become exposed or not.  The user will send curl commands to each of the servers to "Whack" the moles.  If a mole is whacked then it will be removed from the game.  The server will return to the watcher the result of the attempt.  Stats will be returned such as the hit percentage and time taken.
 
 The current implementation was a rough draft which intended to test a proof of concept using HTTP to communicate between each of the mole, watcher, and hole.  Each of these microservices were containerized with Docker, use the Docker network to communicate, and are orchestrated with Docker Compose.
@@ -70,8 +73,22 @@ A hole type is made which contains the holes address
 - verifyUniqeMole checks if mole is already in master list
 
 
-## V2 Goals
+## V2 Projected Goals
 ======================================================================
 The first goal is to go back through the original code and see if it can be cleaned up.
 The second goal is to add the functionality for the different apps to send actual port information (if this is possible with Docker).  I think I should use docker-compose up --scale hole=3 --scale mole=2.  This command will allow theoretically allow me to create multiple of each of the apps that can be aware of themselves on the Docker network by using os.Hostname().  I should test the scale-up command and the os.Hostname command before doing so.
 Lastly I would like to use nginx to communicate from outside the Docker container environment using a Reverse Proxy to be able to locate the apps in a manner similar to DNS.  I will need to move away from my port exposing in this method.
+
+## V2 Realized Goals
+======================================================================
+I decided to go back to basics and rewrite my V1 spike.  This massively simplified the code as I rewrote it to a monolith.  This definitely doesn't have all the capability of the original but simplified some of the design by getting rid of most of the complexities in Docker, concurrency, HTTP, and 3 separate apps.  The code is much better organized from a testability stand-point, but I think suffers from having too much information folded into one file.  I did still develop with V3 in mind where I added some abstractions which were a bit ahead of this version.  I think I will first break this into separate modules because the game is getting a bit more complex as I develop and I pushing back towards the capabilities I was looking at testing will only add to this complexity.  I am much happier with this design, but I did race at the end and I think my code got a bit more sloppy for the effort.
+
+This version is run by just: **go run ./cmd**
+
+There is some madness in this implementation because I couldn't quickly figure out how to have log lines overwrite.  I wanted information to show in the terminal when moles appeared or vanished so the user would have feedback on what to do but this creates havoc without having a clean UI to work with.  This is something I'll need to figure out for future versions as I still imagine the app having a HUD like display, but I kind of like this chaos right now.  Really makes you root against the moles.
+
+I kept all of the old code because I didn't have any real reason to delete it yet outside of keeping the repo clean, but this is just a toy for now.  I'll probably get rid of the bloat in V3 when I do some of the other cleaning I had planned.
+
+## V3 Projected Goals
+======================================================================
+My next iteration, I want to break the monolithic main.go into 4 basic packages: main, game, moles, and holes.  The logic is already written so this will mostly just be parsing out the functionality to each of the individual files.  I think I'll also go back and try to flatten out some of the io/game loop logic I added near the end because I just started rushing to finish the commit.  Likely one more day would have it where it needs to be so I'm not too worried.
