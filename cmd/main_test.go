@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"strings"
 	"testing"
 )
 
@@ -73,26 +75,26 @@ func TestMoleTunnel(t *testing.T) {
 }
 
 func TestGameSetup(t *testing.T) {
-	g := NewGame()
+	var buf bytes.Buffer
+	g := NewGame(&buf)
 	g.Init(5, 3)
 	assert.Equal(t, 2, len(g.HoleFactory.HoleSet.Available))
 	assert.Equal(t, 3, len(g.HoleFactory.HoleSet.Unavailable))
 
-	g = NewGame()
+	g = NewGame(&buf)
 	g.Init(5, 7)
 	assert.Equal(t, 0, len(g.HoleFactory.HoleSet.Available))
 	assert.Equal(t, 5, len(g.HoleFactory.HoleSet.Unavailable))
 
-
-	g = NewGame()
+	g = NewGame(&buf)
 	g.Init(0, 7)
 	assert.Equal(t, 0, len(g.HoleFactory.HoleSet.Available))
 	assert.Equal(t, 0, len(g.HoleFactory.HoleSet.Unavailable))
 }
 
-
 func TestGameWin(t *testing.T) {
-	g := NewGame()
+	var buf bytes.Buffer
+	g := NewGame(&buf)
 	g.Init(3, 3)
 
 	assert.Equal(t, 0, len(g.MoleFactory.MoleSet.Dead))
@@ -108,4 +110,22 @@ func TestGameWin(t *testing.T) {
 
 	assert.Equal(t, 3, len(g.MoleFactory.MoleSet.Dead))
 	assert.True(t, g.CheckWin(3))
+}
+
+func TestGameInputHandling(t *testing.T) {
+	var buf bytes.Buffer
+	g := NewGame(&buf)
+	g.Init(3, 3)
+	commands := make(chan string)
+	input := strings.NewReader("moles\nholes\nhelp\nwhack 2\nquit\n")
+	scanner := g.InitForPlayer(input)
+	go g.ReadCommands(scanner, commands)
+	for g.State != End {
+		g.ProcessPlayerInput(<-commands)
+	}
+	assert.Contains(t, buf.String(), "hole: 1")
+	assert.Contains(t, buf.String(), "Dead: 0")
+	assert.Contains(t, buf.String(), "HELP HELP")
+	assert.Contains(t, buf.String(), "SHLONK!")
+
 }
