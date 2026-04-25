@@ -12,14 +12,16 @@ import (
 )
 
 const WelcomeMessage = `
-|||=======MOLES MOLES MOLES MOLES=======|||\n
-Welcome to a wonderful game of moles. It's quite simple:\n
-There are holes which can be whacked and there are moles which need to be whacked!\n
-Whack all the moles! GO!!!!!\n\n
+|||=======MOLES MOLES MOLES MOLES=======|||
+Welcome to a wonderful game of moles. It's quite simple:
+There are holes which can be whacked and there are moles which need to be whacked!
+Whack all the moles! GO!!!!!
+
+
 `
 
 const HelpMessage = `
-|||=======HELP HELP HELP HELP HELP=======|||\n
+|||=======HELP HELP HELP HELP HELP=======|||
 The name of the game is to whack all of the moles:
 
 Commands:
@@ -487,7 +489,9 @@ func (g *Game) ProcessMoleMoves(entropy int) {
 func main() {
 	rand.Seed(time.Now().UnixNano())
 	g := NewGame(os.Stdout)
-	g.Init(3, 3)
+	moles := 3
+	holes := 3
+	g.Init(holes, moles)
 	commands := make(chan string)
 	scanner := g.InitForPlayer(os.Stdin)
 	go g.ReadCommands(scanner, commands)
